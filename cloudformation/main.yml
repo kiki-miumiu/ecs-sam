@@ -1,8 +1,7 @@
+---
 AWSTemplateFormatVersion: "2010-09-09"
-Transform: AWS::Serverless-2016-10-31
 Description: >
-  Sample SAM Template for
-
+  Sample SAM Template Main
 Parameters:
   Name:
     Description: Name of App
@@ -17,12 +16,4 @@ Parameters:
     Type: String
     AllowedPattern: ".+"
     Default: Platform
-Resources:
-  MainStack:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      TemplateURL: cloudformation/main.yml
-      Parameters:
-        Name: !Ref Name
-        EnvironmentType: !Ref EnvironmentType
-        Owner: !Ref Owner
+Resources:   # Add Resource here
