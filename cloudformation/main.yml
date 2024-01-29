@@ -16,4 +16,131 @@ Parameters:
     Type: String
     AllowedPattern: ".+"
     Default: Platform
+  VpcId:
+    Description: VpcId
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /CNS/resources/vpc_id
+  AppCpu:
+    Type: String
+    Default: 2048
+  AppMemory:
+    Type: String
+    Default: 4096
+  AppPort:
+    Description: Port no. for the app
+    Type: Number
+    Default: 3128
+  AppSG:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /hello-world/test/app_sg
+  AppECSTaskExecutionRoleArn:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /hello-world/test/app_ecs_task_execution_role_arn
+  LoadBalancerArn:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /hello-world/test/nlb_arn
+  ECSClusterName:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /hello-world/test/ecs_cluster_name
+  AppImageUri:
+    Description: URI of App image
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /hello-world/test/ecs_repository_uri
+  ECSServiceDesiredCount:
+    Type: String
+    Default: 3
+  ResSubnets:
+    Type: "AWS::SSM::Parameter::Value<List<AWS::EC2::Subnet::Id>>"
+    Default: "/CNS/resources/subnets/res/all"
+
 Resources:   # Add Resource here
+  ECSTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub ${Name}-TG
+      VpcId: !Ref VpcId
+      Protocol: TCP
+      Port: !Ref AppPort
+      TargetType: ip
+      HealthCheckIntervalSeconds: 10
+      HealthyThresholdCount: 3
+      UnhealthyThresholdCount: 3
+      HealthCheckProtocol: TCP
+      HealthCheckPort: !Ref AppPort
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: "5"
+        - Key: deregistration_delay.connection_termination.enabled
+          Value: "true"
+        - Key: preserve_client_ip.enabled
+          Value: "true"
+        - Key: proxy_protocol_v2.enabled
+          Value: "false"
+  
+  NLBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref LoadBalancerArn
+      Port: !Ref AppPort
+      Protocol: TCP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref ECSTargetGroup
+  
+  ECSTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      ContainerDefinitions:
+        - Name: !Sub ${Name}
+          Image: !Ref AppImageUri
+          PortMappings:
+            - ContainerPort: !Ref AppPort
+              HostPort: !Ref AppPort
+              Protocol: tcp
+          HealthCheck:
+            Command:
+              - CMD-SHELL
+              - nc -v -z -w 1 localhost 3128 || exit 1
+            Interval: 30
+            Retries: 3
+            Timeout: 5
+          # LogConfiguration:
+          #   LogDriver: awslogs
+          #   Options:
+          #     awslogs-group: !Ref ECSTaskLogGroup
+          #     awslogs-region: !Sub "${AWS::Region}"
+          #     awslogs-stream-prefix: sqProxy
+      Memory: !Ref AppMemory
+      Cpu: !Ref AppCpu
+      RequiresCompatibilities:
+        - FARGATE
+      RuntimePlatform:
+        CpuArchitecture: ARM64
+        OperatingSystemFamily: LINUX
+      NetworkMode: awsvpc
+      ExecutionRoleArn: !Ref AppECSTaskExecutionRoleArn
+      TaskRoleArn: !Ref AppECSTaskExecutionRoleArn
+  
+  ECSService:
+    Type: AWS::ECS::Service
+    DependsOn: NLBListener
+    Properties:
+      Cluster: !Ref ECSClusterName
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 100
+      DeploymentController:
+        Type: ECS
+      DesiredCount: !Ref ECSServiceDesiredCount
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          SecurityGroups:
+            - !Ref AppSG
+          Subnets: !Ref ResSubnets
+      TaskDefinition: !Ref ECSTaskDefinition
+      LoadBalancers:
+        - ContainerName: !Sub ${Name}
+          ContainerPort: !Ref AppPort
+          TargetGroupArn: !Ref ECSTargetGroup
