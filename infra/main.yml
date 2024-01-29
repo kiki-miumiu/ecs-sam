@@ -1,0 +1,206 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Sample SAM Template Main
+Parameters:
+  Name:
+    Description: Name of App
+    Type: String
+    Default: hello-world
+  EnvironmentType:
+    Description: Name of Environment Type. Example - prod, test
+    Type: String
+    Default: test
+  Owner:
+    Description: An owner's login or team
+    Type: String
+    AllowedPattern: ".+"
+    Default: Platform
+  ECCFSubnets:
+    Type: "AWS::SSM::Parameter::Value<List<AWS::EC2::Subnet::Id>>"
+    Default: "/CNS/resources/subnets/eccf/primary"
+  VpcId:
+    Description: VpcId
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /CNS/resources/vpc_id
+  AppPort:
+    Description: Port no. for the app
+    Type: Number
+    Default: 3128
+Resources:   # Add Resource here
+  ECSServiceLinkedRole:
+    Type: AWS::IAM::ServiceLinkedRole
+    Properties:
+      AWSServiceName: ecs.amazonaws.com
+      Description: Role to enable Amazon ECS to manage your cluster.     
+  Cluster:
+    Type: AWS::ECS::Cluster
+    DependsOn:
+      - ECSServiceLinkedRole
+    Properties:
+      CapacityProviders:
+        - FARGATE
+        - FARGATE_SPOT
+      ClusterName: !Ref Name
+      ClusterSettings:
+        - Name: containerInsights
+          Value: enabled
+      Tags:
+        - Key: Owner
+          Value: !Ref Owner
+        - Key: EnvironmentType
+          Value: !Ref EnvironmentType
+        - Key: Name
+          Value: !Ref Name
+
+  ClusterSSMParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /${Name}/${EnvironmentType}/ecs_cluster_name
+      Type: String
+      Value: !Ref Cluster
+      Tags:
+        Owner: !Ref Owner
+        EnvironmentType: !Ref EnvironmentType
+        Name: !Ref Name
+
+  ECRRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Sub ${Name}
+      # EncryptionConfiguration:
+      #   EncryptionType: AES256
+      # ImageScanningConfiguration:
+      #   ScanOnPush: true
+      # RepositoryPolicyText:
+      #   Version: "2012-10-17"
+      #   Statement:
+      #     - Sid: PushImageDevOpsAccount
+      #       Effect: Allow
+      #       Principal:
+      #         AWS: !Sub arn:aws:iam::${DevOpsAccount}:root
+      #       Action:
+      #         - ecr:BatchCheckLayerAvailability
+      #         - ecr:CompleteLayerUpload
+      #         - ecr:GetAuthorizationToken
+      #         - ecr:InitiateLayerUpload
+      #         - ecr:PutImage
+      #         - ecr:UploadLayerPart
+      #         - ecr:BatchGetImage
+      #         - ecr:GetDownloadUrlForLayer
+      #     - Sid: PullImageByCurrentAccount
+      #       Effect: Allow
+      #       Principal:
+      #         AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+      #       Action:
+      #         - ecr:BatchGetImage
+      #         - ecr:GetDownloadUrlForLayer
+      Tags:
+        - Key: Owner
+          Value: !Ref Owner
+        - Key: EnvironmentType
+          Value: !Ref EnvironmentType
+        - Key: Name
+          Value: !Ref Name
+
+  ECRRepositoryURISSMParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /${Name}/${EnvironmentType}/ecr_repository_uri
+      Type: String
+      Value: !GetAtt ECRRepository.RepositoryUri
+      Tags:
+        Owner: !Ref Owner
+        EnvironmentType: !Ref EnvironmentType
+        Name: !Ref Name
+
+  NLB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    # DependsOn: NLBAccessLogsBucketPolicy
+    Properties:
+      Scheme: internal
+      Subnets: !Ref ECCFSubnets
+      Type: network
+      Name: !Sub ${Name}-nlb
+      # LoadBalancerAttributes:
+      #   - Key: access_logs.s3.enabled
+      #     Value: "true"
+      #   - Key: access_logs.s3.bucket
+      #     Value: !Ref AccessLogsS3
+      #   - Key: access_logs.s3.prefix
+      #     Value: NLB/Platforms/Internet-Proxy
+      #   - Key: deletion_protection.enabled
+      #     Value: "true"
+
+  NLBSSMParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /${Name}/${EnvironmentType}/nlb_arn
+      Type: String
+      Value: !Ref NLB
+      Description: The ARN of Network Load Balancer
+      Tags:
+        Owner: !Ref Owner
+        EnvironmentType: !Ref EnvironmentType
+        Name: !Ref Name
+
+  AppSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: ECS Service/APP Security Group
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          CidrIp: "10.0.0.0/8"
+          FromPort: !Ref AppPort
+          ToPort: !Ref AppPort
+          Description: Allow Traffic from
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: "10.0.0.0/8"
+          FromPort: 0
+          ToPort: 65535
+          Description: Allow all traffic to
+      Tags:
+        - Key: Owner
+          Value: !Ref Owner
+        - Key: EnvironmentType
+          Value: !Ref EnvironmentType
+        - Key: Name
+          Value: !Ref Name
+
+  AppSGSSMParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /${Name}/${EnvironmentType}/app_sg
+      Type: String
+      Value: !Ref AppSG
+      Tags:
+        Owner: !Ref Owner
+        EnvironmentType: !Ref EnvironmentType
+        Name: !Ref Name
+
+  # ECS task execution role
+  AppECSTaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+
+  AppECSTaskExecutionRoleArnSSMParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /${Name}/${EnvironmentType}/app_ecs_task_execution_role_arn
+      Type: String
+      Value: !Ref AppECSTaskExecutionRole
+      Tags:
+        Owner: !Ref Owner
+        EnvironmentType: !Ref EnvironmentType
+        Name: !Ref Name     
