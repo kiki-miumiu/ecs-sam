@@ -1,5 +1,10 @@
 #
 
+## Dependency
+
+* VPC
+* Internet access to Public/Private ECR or VPC endpoint to Private ECR
+
 ## Prerequisites
 
 ### Setup CLI environment

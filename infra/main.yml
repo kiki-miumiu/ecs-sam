@@ -157,10 +157,10 @@ Resources:   # Add Resource here
           Description: Allow Traffic from
       SecurityGroupEgress:
         - IpProtocol: -1
-          CidrIp: "10.0.0.0/8"
+          CidrIp: "0.0.0.0/0"
           FromPort: 0
           ToPort: 65535
-          Description: Allow all traffic to
+          Description: Allow all traffic to ECR, required even though there is a private endpoint to ECR
       Tags:
         - Key: Owner
           Value: !Ref Owner
