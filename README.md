@@ -2,6 +2,16 @@
 
 This is a boilerplate repo for aws sam
 
+## Dependency
+
+### Setup Infra
+
+See [infra README](.infra/README.md)
+
+### SSM Parameters
+
+* Create Relevant SSM used by this cloudformation
+
 ## Prerequisites
 
 ### Setup CLI environment
@@ -18,10 +28,6 @@ aws sts get-caller-identity
 ```bash
 pip install aws-sam-cli | brew install aws-sam-cli
 ```
-
-### Setup Infra
-
-See [infra README](.infra/README.md)
 
 ## Deploy
 

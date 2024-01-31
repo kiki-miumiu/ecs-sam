@@ -2,8 +2,14 @@
 
 ## Dependency
 
+### Network
+
 * VPC
 * Internet access to Public/Private ECR or VPC endpoint to Private ECR
+
+### SSM Parameters
+
+* Create Relevant SSM used by this cloudformation
 
 ## Prerequisites
 
