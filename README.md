@@ -19,10 +19,16 @@ aws sts get-caller-identity
 pip install aws-sam-cli | brew install aws-sam-cli
 ```
 
+### Setup Infra
+
+See [infra README](.infra/README.md)
+
 ## Deploy
 
 ### Local
 
 ```bash
 sam build && sam deploy --guided
+or
+sam build && sam deploy --config-env pv-test
 ```

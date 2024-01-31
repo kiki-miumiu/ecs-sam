@@ -29,7 +29,7 @@ Parameters:
   AppPort:
     Description: Port no. for the app
     Type: Number
-    Default: 3128
+    Default: 80
   AppSG:
     Type: AWS::SSM::Parameter::Value<String>
     Default: /hello-world/test/app_sg
@@ -44,8 +44,10 @@ Parameters:
     Default: /hello-world/test/ecs_cluster_name
   AppImageUri:
     Description: URI of App image
-    Type: AWS::SSM::Parameter::Value<String>
-    Default: /hello-world/test/ecs_repository_uri
+    # Type: AWS::SSM::Parameter::Value<String>
+    # Default: /hello-world/test/ecs_repository_uri
+    Type: String
+    Default: "771045647546.dkr.ecr.ap-southeast-2.amazonaws.com/hello-world:latest"
   ECSServiceDesiredCount:
     Type: String
     Default: 3
@@ -57,7 +59,7 @@ Resources:   # Add Resource here
   ECSTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
-      Name: !Sub ${Name}-TG
+      # Name: !Sub ${Name}-TG
       VpcId: !Ref VpcId
       Protocol: TCP
       Port: !Ref AppPort
@@ -86,7 +88,15 @@ Resources:   # Add Resource here
       DefaultActions:
         - Type: forward
           TargetGroupArn: !Ref ECSTargetGroup
-  
+
+  ECSTaskLogGroup:
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 365
+      LogGroupName: !Sub ${Name}
+
   ECSTaskDefinition:
     Type: AWS::ECS::TaskDefinition
     Properties:
@@ -100,22 +110,23 @@ Resources:   # Add Resource here
           HealthCheck:
             Command:
               - CMD-SHELL
-              - nc -v -z -w 1 localhost 3128 || exit 1
+              - echo hello
             Interval: 30
             Retries: 3
             Timeout: 5
-          # LogConfiguration:
-          #   LogDriver: awslogs
-          #   Options:
-          #     awslogs-group: !Ref ECSTaskLogGroup
-          #     awslogs-region: !Sub "${AWS::Region}"
-          #     awslogs-stream-prefix: sqProxy
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref ECSTaskLogGroup
+              awslogs-region: !Sub "${AWS::Region}"
+              awslogs-stream-prefix: !Sub ${Name}
       Memory: !Ref AppMemory
       Cpu: !Ref AppCpu
       RequiresCompatibilities:
         - FARGATE
       RuntimePlatform:
-        CpuArchitecture: ARM64
+        # CpuArchitecture: ARM64
+        CpuArchitecture: X86_64
         OperatingSystemFamily: LINUX
       NetworkMode: awsvpc
       ExecutionRoleArn: !Ref AppECSTaskExecutionRoleArn

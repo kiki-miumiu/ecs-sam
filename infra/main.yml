@@ -26,7 +26,7 @@ Parameters:
   AppPort:
     Description: Port no. for the app
     Type: Number
-    Default: 3128
+    Default: 80
 Resources:   # Add Resource here
   ECSServiceLinkedRole:
     Type: AWS::IAM::ServiceLinkedRole
