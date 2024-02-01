@@ -51,10 +51,12 @@ Parameters:
   ECSServiceDesiredCount:
     Type: String
     Default: 3
-  ResSubnets:
+  AppSubnets:
     Type: "AWS::SSM::Parameter::Value<List<AWS::EC2::Subnet::Id>>"
     Default: "/CNS/resources/subnets/res/all"
-
+  NonRoutableSubnets:
+    Type: "AWS::SSM::Parameter::Value<List<AWS::EC2::Subnet::Id>>"
+    Default: "/CNS/resources/subnets/NonRoutable/all"
 Resources:   # Add Resource here
   ECSTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
@@ -149,7 +151,31 @@ Resources:   # Add Resource here
           AssignPublicIp: DISABLED
           SecurityGroups:
             - !Ref AppSG
-          Subnets: !Ref ResSubnets
+          Subnets: !Ref AppSubnets
+      TaskDefinition: !Ref ECSTaskDefinition
+      LoadBalancers:
+        - ContainerName: !Sub ${Name}
+          ContainerPort: !Ref AppPort
+          TargetGroupArn: !Ref ECSTargetGroup
+
+  Test:
+    Type: AWS::ECS::Service
+    DependsOn: NLBListener
+    Properties:
+      Cluster: !Ref ECSClusterName
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 100
+      DeploymentController:
+        Type: ECS
+      DesiredCount: 1
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          SecurityGroups:
+            - !Ref AppSG
+          Subnets: !Ref NonRoutableSubnets
       TaskDefinition: !Ref ECSTaskDefinition
       LoadBalancers:
         - ContainerName: !Sub ${Name}

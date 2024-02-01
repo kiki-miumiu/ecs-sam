@@ -1,0 +1,140 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Sample SAM Template Main
+Parameters:
+  Name:
+    Description: Name of App
+    Type: String
+    Default: hello-world
+  EnvironmentType:
+    Description: Name of Environment Type. Example - prod, test
+    Type: String
+    Default: test
+  Owner:
+    Description: An owner's login or team
+    Type: String
+    AllowedPattern: ".+"
+    Default: Platform
+  VpcId:
+    Description: VpcId
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /CNS/resources/vpc_id
+  VpcCidrBlockA:
+    Description: (Required) VPC CIDR block-1 used for creating the new non routable subnets
+    Type: String
+    Default: 100.64.64.0/18 #100.64.0.0/18 is conflicted with tgw
+
+  VpcCidrBlockB:
+    Description: (Optional) VPC CIDR block-2 used for creating the new non routable subnets
+    Type: String
+    Default: 100.64.128.0/18
+
+  VpcCidrBlockC:
+    Description: (Optional) VPC CIDR block-3 used for creating the new non routable subnets
+    Type: String
+    Default: 100.64.192.0/18
+
+Resources:
+
+  NonRoutableCidrBlockA:
+    Type: AWS::EC2::VPCCidrBlock
+    Properties:
+      VpcId: !Ref VpcId
+      CidrBlock: !Ref VpcCidrBlockA
+
+  NonRoutableCidrBlockB:
+    Type: AWS::EC2::VPCCidrBlock
+    Properties:
+      VpcId: !Ref VpcId
+      CidrBlock: !Ref VpcCidrBlockB
+
+  NonRoutableCidrBlockC:
+    Type: AWS::EC2::VPCCidrBlock
+    Properties:
+      VpcId: !Ref VpcId
+      CidrBlock: !Ref VpcCidrBlockC
+
+  NonRoutableSubnetA:
+    Type: AWS::EC2::Subnet
+    DependsOn:
+      - NonRoutableCidrBlockA
+    Properties:
+      AvailabilityZone: !Join ["", [!Ref "AWS::Region", a]]
+      CidrBlock: !Ref VpcCidrBlockA
+      VpcId: !Ref VpcId
+      Tags:
+        - Key: Owner
+          Value: !Ref Owner
+        - Key: EnvironmentType
+          Value: !Ref EnvironmentType
+        - Key: Name
+          Value: !Ref Name
+
+  NonRoutableSubnetB:
+    Type: AWS::EC2::Subnet
+    DependsOn:
+      - NonRoutableCidrBlockB
+    Properties:
+      AvailabilityZone: !Join ["", [!Ref "AWS::Region", a]]
+      CidrBlock: !Ref VpcCidrBlockB
+      VpcId: !Ref VpcId
+      Tags:
+        - Key: Owner
+          Value: !Ref Owner
+        - Key: EnvironmentType
+          Value: !Ref EnvironmentType
+        - Key: Name
+          Value: !Ref Name
+
+  NonRoutableSubnetC:
+    Type: AWS::EC2::Subnet
+    DependsOn:
+      - NonRoutableCidrBlockC
+    Properties:
+      AvailabilityZone: !Join ["", [!Ref "AWS::Region", a]]
+      CidrBlock: !Ref VpcCidrBlockC
+      VpcId: !Ref VpcId
+      Tags:
+        - Key: Owner
+          Value: !Ref Owner
+        - Key: EnvironmentType
+          Value: !Ref EnvironmentType
+        - Key: Name
+          Value: !Ref Name
+
+  NonRoutableSubnetSSMParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /CNS/resources/subnets/NonRoutable/all
+      Type: StringList
+      Value: !Join
+        - ','
+        - - !Ref NonRoutableSubnetA
+          - !Ref NonRoutableSubnetB
+          - !Ref NonRoutableSubnetC
+      Description: List of all subnets for NonRoutable Subnets
+      Tags:
+        Owner: !Ref Owner
+        EnvironmentType: !Ref EnvironmentType
+        Name: !Ref Name
+
+  # PrivateNATGateway:
+  #   Type: AWS::EC2::NatGateway
+  #   Properties:
+  #       ConnectivityType: private
+  #       SubnetId: subnet-09c4d669b71b71765
+  #       Tags:
+  #         - Key: Owner
+  #           Value: !Ref Owner
+  #         - Key: EnvironmentType
+  #           Value: !Ref EnvironmentType
+  #         - Key: Name
+  #           Value: !Ref Name
+
+  RoutePrivateNATGateway:
+    Type: AWS::EC2::Route
+    Properties:
+        RouteTableId: rtb-0eaa856818750fccd
+        DestinationCidrBlock: '0.0.0.0/0'
+        NatGatewayId: nat-010b0dd71151933a2
