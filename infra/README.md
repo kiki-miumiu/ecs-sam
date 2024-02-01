@@ -29,3 +29,9 @@ aws sts get-caller-identity
 ```bash
 aws cloudformation deploy --stack-name hello-world-ecs --template-file main.yml --capabilities CAPABILITY_IAM
 ```
+
+## Reference
+
+* https://aws.amazon.com/blogs/containers/leveraging-cni-custom-networking-alongside-security-groups-for-pods-in-amazon-eks/
+* https://aws.amazon.com/blogs/containers/addressing-ipv4-address-exhaustion-in-amazon-eks-clusters-using-private-nat-gateways/
+* https://aws.amazon.com/blogs/networking-and-content-delivery/how-to-solve-private-ip-exhaustion-with-private-nat-solution/
