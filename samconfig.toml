@@ -20,3 +20,13 @@ capabilities = "CAPABILITY_IAM"
 disable_rollback = false
 parameter_overrides = "Name=\"hello-world\" EnvironmentType=\"test\" Owner=\"Platform\""
 image_repositories = []
+
+[default]
+[default.deploy]
+[default.deploy.parameters]
+stack_name = "hello-world-ecs"
+s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-sqhbt243yowe"
+s3_prefix = "hello-world-ecs"
+region = "ap-southeast-2"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"

@@ -2,16 +2,6 @@
 
 This is a boilerplate repo for aws sam
 
-## Dependency
-
-### Setup Infra
-
-See [infra README](.infra/README.md)
-
-### SSM Parameters
-
-* Create Relevant SSM used by this cloudformation
-
 ## Prerequisites
 
 ### Setup CLI environment
