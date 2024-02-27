@@ -2,7 +2,13 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: Deploying Nginx to ECS Fargate using AWS SAM
-
+Parameters:
+  SubnetA:
+    Type: String
+    Default: "subnet-a36a54c7"
+  SubnetB:
+    Type: String
+    Default: "subnet-92705ce4"
 Resources:
   ECSServiceLinkedRole:
     Type: AWS::IAM::ServiceLinkedRole
@@ -48,19 +54,17 @@ Resources:
     DependsOn:
       - ECSServiceLinkedRole
 
-  # ECSService:
-  #   Type: AWS::ECS::Service
-  #   DependsOn: ECSCluster
-  #   Properties:
-  #     Cluster: !Ref ECSCluster
-  #     DesiredCount: 1
-  #     TaskDefinition: !Ref NginxTaskDefinition
-  #     LaunchType: FARGATE
-  #     NetworkConfiguration:
-  #       AwsvpcConfiguration:
-  #         AssignPublicIp: ENABLED
-
-# Outputs:
-#   ServiceEndpoint:
-#     Description: URL of the Nginx service
-#     Value: !Sub "http://${ECSService.LoadBalancer.DNSName}"
+  ECSService:
+    Type: AWS::ECS::Service
+    DependsOn: ECSCluster
+    Properties:
+      Cluster: !Ref ECSCluster
+      DesiredCount: 1
+      TaskDefinition: !Ref NginxTaskDefinition
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          Subnets:
+            - !Ref SubnetA
+            - !Ref SubnetB
