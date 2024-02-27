@@ -27,6 +27,7 @@ aws sts get-caller-identity
 ### Local
 
 ```bash
+aws cloudformation deploy --stack-name hello-world-nonroutable-subnets --template-file nonroutable-subnets.yml
 aws cloudformation deploy --stack-name hello-world-ecs --template-file main.yml --capabilities CAPABILITY_IAM
 ```
 

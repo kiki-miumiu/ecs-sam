@@ -35,6 +35,10 @@ Parameters:
     Type: String
     Default: 100.64.192.0/18
 
+  ECCFSubnets:
+    Type: "AWS::SSM::Parameter::Value<List<AWS::EC2::Subnet::Id>>"
+    Default: "/CNS/resources/subnets/eccf/primary"
+
 Resources:
 
   NonRoutableCidrBlockA:
@@ -76,7 +80,7 @@ Resources:
     DependsOn:
       - NonRoutableCidrBlockB
     Properties:
-      AvailabilityZone: !Join ["", [!Ref "AWS::Region", a]]
+      AvailabilityZone: !Join ["", [!Ref "AWS::Region", b]]
       CidrBlock: !Ref VpcCidrBlockB
       VpcId: !Ref VpcId
       Tags:
@@ -92,7 +96,7 @@ Resources:
     DependsOn:
       - NonRoutableCidrBlockC
     Properties:
-      AvailabilityZone: !Join ["", [!Ref "AWS::Region", a]]
+      AvailabilityZone: !Join ["", [!Ref "AWS::Region", c]]
       CidrBlock: !Ref VpcCidrBlockC
       VpcId: !Ref VpcId
       Tags:
@@ -119,22 +123,52 @@ Resources:
         EnvironmentType: !Ref EnvironmentType
         Name: !Ref Name
 
-  # PrivateNATGateway:
-  #   Type: AWS::EC2::NatGateway
-  #   Properties:
-  #       ConnectivityType: private
-  #       SubnetId: subnet-09c4d669b71b71765
-  #       Tags:
-  #         - Key: Owner
-  #           Value: !Ref Owner
-  #         - Key: EnvironmentType
-  #           Value: !Ref EnvironmentType
-  #         - Key: Name
-  #           Value: !Ref Name
+  PrivateNATGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+        ConnectivityType: private
+        SubnetId: !Select [ "0", !Ref ECCFSubnets ]
+        Tags:
+          - Key: Owner
+            Value: !Ref Owner
+          - Key: EnvironmentType
+            Value: !Ref EnvironmentType
+          - Key: Name
+            Value: !Ref Name
 
   RoutePrivateNATGateway:
     Type: AWS::EC2::Route
     Properties:
-        RouteTableId: rtb-0eaa856818750fccd
+        RouteTableId: !Ref NonRoutableSubnetRouteTable
         DestinationCidrBlock: '0.0.0.0/0'
-        NatGatewayId: nat-010b0dd71151933a2
+        NatGatewayId: !Ref PrivateNATGateway
+
+  NonRoutableSubnetRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VpcId
+      Tags:
+        - Key: Owner
+          Value: !Ref Owner
+        - Key: EnvironmentType
+          Value: !Ref EnvironmentType
+        - Key: Name
+          Value: !Ref Name
+
+  NonRoutableSubnetRouteTableAssociationA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref NonRoutableSubnetRouteTable
+      SubnetId: !Ref NonRoutableSubnetA
+
+  NonRoutableSubnetRouteTableAssociationB:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref NonRoutableSubnetRouteTable
+      SubnetId: !Ref NonRoutableSubnetB
+
+  NonRoutableSubnetRouteTableAssociationC:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref NonRoutableSubnetRouteTable
+      SubnetId: !Ref NonRoutableSubnetC

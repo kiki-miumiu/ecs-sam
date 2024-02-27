@@ -39,15 +39,16 @@ Parameters:
   LoadBalancerArn:
     Type: AWS::SSM::Parameter::Value<String>
     Default: /hello-world/test/nlb_arn
+  PublicLoadBalancerArn:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /hello-world/test/public_nlb_arn
   ECSClusterName:
     Type: AWS::SSM::Parameter::Value<String>
     Default: /hello-world/test/ecs_cluster_name
   AppImageUri:
     Description: URI of App image
-    # Type: AWS::SSM::Parameter::Value<String>
-    # Default: /hello-world/test/ecs_repository_uri
-    Type: String
-    Default: "771045647546.dkr.ecr.ap-southeast-2.amazonaws.com/hello-world:latest"
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /hello-world/test/ecr_repository_uri
   ECSServiceDesiredCount:
     Type: String
     Default: 3
@@ -92,8 +93,6 @@ Resources:   # Add Resource here
           TargetGroupArn: !Ref ECSTargetGroup
 
   ECSTaskLogGroup:
-    DeletionPolicy: Retain
-    UpdateReplacePolicy: Retain
     Type: AWS::Logs::LogGroup
     Properties:
       RetentionInDays: 365
@@ -134,31 +133,31 @@ Resources:   # Add Resource here
       ExecutionRoleArn: !Ref AppECSTaskExecutionRoleArn
       TaskRoleArn: !Ref AppECSTaskExecutionRoleArn
   
-  ECSService:
-    Type: AWS::ECS::Service
-    DependsOn: NLBListener
-    Properties:
-      Cluster: !Ref ECSClusterName
-      DeploymentConfiguration:
-        MaximumPercent: 200
-        MinimumHealthyPercent: 100
-      DeploymentController:
-        Type: ECS
-      DesiredCount: !Ref ECSServiceDesiredCount
-      LaunchType: FARGATE
-      NetworkConfiguration:
-        AwsvpcConfiguration:
-          AssignPublicIp: DISABLED
-          SecurityGroups:
-            - !Ref AppSG
-          Subnets: !Ref AppSubnets
-      TaskDefinition: !Ref ECSTaskDefinition
-      LoadBalancers:
-        - ContainerName: !Sub ${Name}
-          ContainerPort: !Ref AppPort
-          TargetGroupArn: !Ref ECSTargetGroup
+  # ECSService:
+  #   Type: AWS::ECS::Service
+  #   DependsOn: NLBListener
+  #   Properties:
+  #     Cluster: !Ref ECSClusterName
+  #     DeploymentConfiguration:
+  #       MaximumPercent: 200
+  #       MinimumHealthyPercent: 100
+  #     DeploymentController:
+  #       Type: ECS
+  #     DesiredCount: !Ref ECSServiceDesiredCount
+  #     LaunchType: FARGATE
+  #     NetworkConfiguration:
+  #       AwsvpcConfiguration:
+  #         AssignPublicIp: DISABLED
+  #         SecurityGroups:
+  #           - !Ref AppSG
+  #         Subnets: !Ref AppSubnets
+  #     TaskDefinition: !Ref ECSTaskDefinition
+  #     LoadBalancers:
+  #       - ContainerName: !Sub ${Name}
+  #         ContainerPort: !Ref AppPort
+  #         TargetGroupArn: !Ref ECSTargetGroup
 
-  Test:
+  NonRoutableService:
     Type: AWS::ECS::Service
     DependsOn: NLBListener
     Properties:

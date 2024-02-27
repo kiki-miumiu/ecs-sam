@@ -19,6 +19,9 @@ Parameters:
   ECCFSubnets:
     Type: "AWS::SSM::Parameter::Value<List<AWS::EC2::Subnet::Id>>"
     Default: "/CNS/resources/subnets/eccf/primary"
+  ECIFSubnets:
+    Type: "AWS::SSM::Parameter::Value<List<AWS::EC2::Subnet::Id>>"
+    Default: "/CNS/resources/subnets/ecif/primary"
   VpcId:
     Description: VpcId
     Type: AWS::SSM::Parameter::Value<String>
@@ -144,6 +147,27 @@ Resources:   # Add Resource here
         EnvironmentType: !Ref EnvironmentType
         Name: !Ref Name
 
+  PublicNLB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    # DependsOn: NLBAccessLogsBucketPolicy
+    Properties:
+      Scheme: internet-facing
+      Subnets: !Ref ECIFSubnets
+      Type: network
+      Name: !Sub ${Name}-nlb-public
+
+  PublicNLBSSMParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /${Name}/${EnvironmentType}/public_nlb_arn
+      Type: String
+      Value: !Ref NLB
+      Description: The ARN of Network Load Balancer
+      Tags:
+        Owner: !Ref Owner
+        EnvironmentType: !Ref EnvironmentType
+        Name: !Ref Name
+
   AppSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -152,8 +176,13 @@ Resources:   # Add Resource here
       SecurityGroupIngress:
         - IpProtocol: tcp
           CidrIp: "10.0.0.0/8"
-          FromPort: !Ref AppPort
-          ToPort: !Ref AppPort
+          FromPort: 0
+          ToPort: 65535
+          Description: Allow Traffic from
+        - IpProtocol: tcp
+          CidrIp: "100.64.0.0/16"
+          FromPort: 0
+          ToPort: 65535
           Description: Allow Traffic from
       SecurityGroupEgress:
         - IpProtocol: -1
@@ -204,3 +233,6 @@ Resources:   # Add Resource here
         Owner: !Ref Owner
         EnvironmentType: !Ref EnvironmentType
         Name: !Ref Name     
+Outputs:
+  LoadBalancerEndpoint:
+    Value: !GetAtt NLB.DNSName
