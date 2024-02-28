@@ -1,6 +1,9 @@
-# sam-boilerplate
+# Running Non Routable IP Containers with Private NatGateway
 
-This is a boilerplate repo for aws sam
+This is a repo to show you how to run non-routable IP containers in AWS ECS with private natgateway
+
+## Solution Overview
+![](./doc/architecture.png)
 
 ## Dependency
 
