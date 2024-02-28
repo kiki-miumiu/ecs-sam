@@ -92,6 +92,16 @@ Resources:   # Add Resource here
         - Type: forward
           TargetGroupArn: !Ref ECSTargetGroup
 
+  PublicNLBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref PublicLoadBalancerArn
+      Port: !Ref AppPort
+      Protocol: TCP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref ECSTargetGroup
+
   ECSTaskLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:

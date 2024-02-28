@@ -161,7 +161,7 @@ Resources:   # Add Resource here
     Properties:
       Name: !Sub /${Name}/${EnvironmentType}/public_nlb_arn
       Type: String
-      Value: !Ref NLB
+      Value: !Ref PublicNLB
       Description: The ARN of Network Load Balancer
       Tags:
         Owner: !Ref Owner
